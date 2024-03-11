@@ -4,6 +4,7 @@ import com.smtech.quizservice.Dao.QuizDao;
 import com.smtech.quizservice.Model.QuestionWrapper;
 import com.smtech.quizservice.Model.Quiz;
 import com.smtech.quizservice.Model.Responce;
+import com.smtech.quizservice.feign.QuizInterface;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,20 +18,26 @@ public class QuizService {
 
     @Autowired
     QuizDao quizDao;
+    @Autowired
+    QuizInterface quizInterface;
 
-    public ResponseEntity<String>createQuiz(String category,int numQ,String String){
-        List<Question> questions=quizDao.findRandomQuestionByCategory(category,numQ);
-
-        Quiz quiz=new Quiz();
+    public ResponseEntity<String>createQuiz(String category,int numQ,String title){
+       List<Integer>questions = quizInterface.getQuestionsForQuiz(category,numQ).getBody();
+        Quiz quiz =new Quiz();
         quiz.setTitle(title);
-        quiz.setQuestions(questions);
+        quiz.setQuestionIds(questions);
         quizDao.save(quiz);
-
         return new ResponseEntity<>("success", HttpStatus.CREATED);
     }
 
-    public ResponseEntity<Integer> calculateResult(Integer id, List<Responce>responces){
-        List<QuestionWrapper>questionWrappers=new ArrayList<>();
-        return new ResponseEntity<>(questionWrappers,HttpStatus.OK);
-    }
+   public ResponseEntity<List<QuestionWrapper>> getQuizQuestions(Integer id){
+        Quiz quiz=quizDao.findById(id).get();
+        List<Integer>questionIds =quiz.getQuestionIds();
+        ResponseEntity<List<QuestionWrapper>> questions = quizInterface.getQuestionsFromId(questionIds);
+        return questions;
+   }
+   public ResponseEntity<Integer> calculateResult(Integer id,List<Responce>responces){
+        ResponseEntity<Integer> score = quizInterface.getScore(responces);
+        return score;
+   }
 }
